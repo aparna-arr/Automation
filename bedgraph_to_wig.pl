@@ -18,19 +18,17 @@ chomp $input ;
 open (BED, "<", $input) or die "Could not open $input\n";
 open (WIG, ">", "$input.wig") or die "Couldn't open output\n";
 my $prevspan = -1 ;
-my $prev_chr = "INIT";
 while (<BED>) 
 {
   my $line = $_ ;
   chomp $line ;
-#  if ($line =~ /^track/ || $line =~ /\#/)
-  if ($line !~ /^chr/)
+  if ($line =~ /^track/ || $line =~ /\#/)
   {
     next ;
   }
-  my ($chr, $start, $end, $value) = split (/\s+/, $line) ;
+  my ($chr, $start, $end, $value) = split (/\t/, $line) ;
   my $span = $end - $start ;
-  if ($span != $prevspan || $chr ne $prev_chr) 
+  if ($span != $prevspan) 
   {
     print WIG "variableStep chrom=$chr span=$span\n" ;
     print WIG "$start\t$value\n" ;
@@ -40,7 +38,6 @@ while (<BED>)
     print WIG "$start\t$value\n" ;
   }
   $prevspan = $span ;
-  $prev_chr = $chr ;
 }
 
 close BED ;
