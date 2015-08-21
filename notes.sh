@@ -30,7 +30,7 @@ function h {
   echo "-h : prints help message"
 }
 
-DIR=/data/aparna/notes
+DIR=/home/arrajpur/github/notes
 EDITOR=vim
 
 if [[ $# -lt 1 ]]

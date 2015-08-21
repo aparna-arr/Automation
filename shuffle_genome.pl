@@ -33,11 +33,11 @@ for (my $i = 0; $i < $loops; $i++) {
 $Q->end;
 
 my @threads;
-for (my $i = 0; $i < 8; $i++) {
+for (my $i = 0; $i < 50; $i++) {
 	$threads[$i] = threads->create(\&worker, $i, $Q);
 }
 
-for (my $i = 0; $i < 8; $i++) {
+for (my $i = 0; $i < 50; $i++) {
 	$threads[$i]->join();
 }
 
