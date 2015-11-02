@@ -2,11 +2,16 @@
 use warnings;
 use strict;
 
-my ($sam, $tot_reads) = @ARGV;
-die "usage: $0 <sorted sam file to normalize> <# reads to normalize to>\nif input is sorted, output is sorted\n" unless @ARGV;
+my ($sam, $tot_reads, $seed) = @ARGV;
+die "usage: $0 <sorted sam file to normalize> <# reads to normalize to> <seed--set to -1 for no seed>\nif input is sorted, output is sorted\n" unless @ARGV;
 
 open (IN, "<", $sam) or die "could not open $sam\n";
 open (OUT, ">", $sam . ".norm") or die "could not open outfile\n";
+
+if ($seed != -1)
+{
+	srand($seed);
+}
 
 ### METHOD ###
 # Read in file
