@@ -75,7 +75,7 @@ foreach my $chr (sort keys %genes)
 
 	print STDERR "Preprocessing chr $chr\n";
 
-	warn "Strands hash size is " . ( keys %{$genes{$chr}} ) . "\n";
+#	warn "Strands hash size is " . ( keys %{$genes{$chr}} ) . "\n";
 
 #	foreach my $debug (keys %{$genes{$chr}})
 #	{
@@ -83,13 +83,13 @@ foreach my $chr (sort keys %genes)
 		###warn "Ar size is " . @{$genes{$chr}{$debug}} . "\n";
 #	}
 
-	my @test;
-	$test[0] = "unchanged";
-	$test[1]{test} = "printme";
+#	my @test;
+#	$test[0] = "unchanged";
+#	$test[1]{test} = "printme";
 
-	my $test_ref = \@test;
+#	my $test_ref = \@test;
 
-	preprocess($genes{$chr}{$strands[0]}, $genes{$chr}{$strands[1]}, \@test);
+	preprocess($genes{$chr}{$strands[0]}, $genes{$chr}{$strands[1]});
 
 	###warn "test0 is $test[0]\n";
 
@@ -102,10 +102,16 @@ foreach my $chr (sort keys %genes)
 	for (my $i = 0; $i < @{$genes{$chr}{$strand}}; $i++)
 	{
 #		warn "on $i of " . @{$genes{$chr}{$strand}} . "\n";
-
 		next if ($genes{$chr}{$strand}[$i]{ignore} == 1);
 
-		print OUT "$chr\t$genes{$chr}{$strand}[$i]{start}\t$genes{$chr}{$strand}[$i]{end}\t$strand\t" . get_ratio($genes{$chr}{$strand}[$i]{TSS}, $genes{$chr}{$strand}[$i]{genebody}, \%pol2, $chr) . "\n";	
+		warn "before call to get_ratio()";
+		my ($rat) = get_ratio($genes{$chr}{$strand}[$i]{TSS}, $genes{$chr}{$strand}[$i]{genebody}, \%pol2, $chr);	
+		warn "after call to get_ratio()";
+
+		print STDERR "in main, ratio is [$rat]\n";
+
+		print STDERR "$chr\t$genes{$chr}{$strand}[$i]{start}\t$genes{$chr}{$strand}[$i]{end}\t$strand\t$rat\n";	
+		print OUT "$chr\t$genes{$chr}{$strand}[$i]{start}\t$genes{$chr}{$strand}[$i]{end}\t$strand\t$rat\n";	
 	}
 
 	$strand = "-";
@@ -115,8 +121,13 @@ foreach my $chr (sort keys %genes)
 #		warn "on $i of " . @{$genes{$chr}{$strand}} . "\n";
 	
 		next if ($genes{$chr}{$strand}[$i]{ignore} == 1);
+		warn "before call to get_ratio()";
+		my ($rat) = get_ratio($genes{$chr}{$strand}[$i]{TSS}, $genes{$chr}{$strand}[$i]{genebody}, \%pol2, $chr);	
+		warn "after call to get_ratio()";
+		print STDERR "in main, ratio is [$rat]\n";
 
-		print OUT "$chr\t$genes{$chr}{$strand}[$i]{start}\t$genes{$chr}{$strand}[$i]{end}\t$strand\t" . get_ratio($genes{$chr}{$strand}[$i]{TSS}, $genes{$chr}{$strand}[$i]{genebody}, \%pol2, $chr) . "\n";	
+		print STDERR "$chr\t$genes{$chr}{$strand}[$i]{start}\t$genes{$chr}{$strand}[$i]{end}\t$strand\t$rat\n";	
+		print OUT "$chr\t$genes{$chr}{$strand}[$i]{start}\t$genes{$chr}{$strand}[$i]{end}\t$strand\t$rat\n";	
 	}
 }
 close OUT;
@@ -127,6 +138,7 @@ close OUT;
 
 sub get_ratio
 {
+	warn "in get_ratio()";
 		my %TSS = %{$_[0]};
 		my %Genebody = %{$_[1]};
 		my $pol2 = $_[2];
@@ -168,7 +180,7 @@ sub get_ratio
 
 		if ($num_bins < 5)
 		{
-			return 0;
+			return "0\t0";
 		}
 
 		##warn "got genebody bins\n";
@@ -217,8 +229,20 @@ sub get_ratio
 
 #		warn "my max is $max my median is $median my ratio is ". ($max / $median) . "\n";
 
-		my $perc = $max == 0 ? 0 : ($max / $median) / $max * 100;
-		return ($max / $median) . "\t" . $perc ;
+#		my $perc = $max == 0 ? 0 : ($max / $median) / $max * 100;
+
+		my $perc = 0;
+
+		if ($max != 0)
+		{
+			$perc = ($max / $median) / $max * 100;
+		}
+
+		my $ratio = "" . ($max / $median) . "\t" . $perc . "";
+warn "ratio is [$ratio], perc is [$perc]\n";
+
+warn "end of get_ratio()";
+		return $ratio;
 }
 
 sub pol2
@@ -262,9 +286,9 @@ sub preprocess
 	my $array2 = $_[1];
 
 
-	my $test = $_[2];
+#	my $test = $_[2];
 
-	$test->[0] = "change";
+#	$test->[0] = "change";
 
 #	for (my $d = 0; $d < @args; $d++)
 #	{
