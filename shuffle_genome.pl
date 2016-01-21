@@ -5,7 +5,7 @@ use Thread::Queue;
 
 my $warning = "
 Warnings:
-Number of threads hardcoded to 8
+Number of threads hardcoded to 50
 
 ";
 
