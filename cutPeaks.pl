@@ -20,6 +20,7 @@ while(<PEAKS>)
 {
 	my $line = $_;
 	chomp $line;
+
 	if ($line =~ /^\s*$/)
 	{
 		next;

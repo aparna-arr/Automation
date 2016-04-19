@@ -1,0 +1,1020 @@
+#!/usr/bin/env perl
+use Getopt::Std;
+$first = $ARGV[0];
+getopt('imbgtrRh');
+
+$broadpeak_directory = $0;
+@broadpeak_path = split(/\//,$broadpeak_directory);
+pop(@broadpeak_path);
+$script_directory = join("/",@broadpeak_path);
+
+
+$command = "which R>R_directory.txt";
+system($command);
+open(IN,"R_directory.txt");
+$line = <IN>;
+close(IN);
+chop($line);
+$r_direct = $line;
+
+$unsupervised_R_script = $script_directory."/unsupervised_estimation.R";
+$same_path_index = 0;
+$same_path_index = 1 
+  if -e $unsupervised_R_script;
+
+### for help ###
+
+if(($first eq "-h") || ($first eq "-help") || ($first eq "help"))                     
+{
+  printf "Help:\n";
+  printf "-i: name (with the correct path) of the BedGraph format input file of the ChIP-seq data\n";
+  printf "-m: name used for output files (normally histone modification or transcription factor names)\n";
+  printf "-b: size of the genomic bins, default value: 200\n";
+  printf "-g: genome size, default value: 3107677273 (for human genome)\n";
+  printf "-t: type of the parameter estimation method: 'supervised' or 'unsupervised'\n";
+  printf "-r: name (with the correct path) of the BED format file of genomic regions used for supervised parameter estimation\n";
+  printf "-R: the directory of R\n";
+}
+
+
+
+
+### required parameter warnings ###
+
+elsif((length($opt_i) == 0) || (length($opt_m) == 0) || (length($opt_t) == 0) || (($opt_t eq 'supervised') && (length($opt_r) == 0)) || (($r_direct eq "") && (length($opt_R) == 0)) || ($same_path_index == 0))         
+{
+   if(length($opt_i) == 0)
+   {
+     printf "Warning: directory and name of the input file (BedGraph format) of the ChIP-seq data need to be provided!\n";
+     printf "Readme: -i\n";
+   }
+   if(length($opt_m) == 0)
+   {
+     printf "Warning: name used for output files need to be provided!\n";
+     printf "Readme: -m\n";
+   }
+   if(length($opt_t) == 0)
+   {
+     printf "Warning: the type of parameter estimation method need to be specified!\n";
+     printf "Readme: -t\n";
+   }
+   if(($opt_t eq 'supervised') && (length($opt_r) == 0))
+   {
+     printf "Warning: for supervised parameter estimation, the BED file of genomic regions for parameter estimation need to be provided!\n";
+     printf "Readme: -r\n";
+   }
+   if(($r_direct eq "") && (length($opt_R) == 0))
+   {
+     printf "Warning: did not find the directory of R, please specify the directory of R using -R\n";
+     printf "Readme: -R\n";
+   }
+   if($same_path_index == 0)
+   {
+     printf "Warning: didn't find \"unsupervised_estimation.R\", please make sure it is located in the same directory with BroadPeak\n";
+   }
+}
+
+
+
+### core of the script ###
+
+else                                                                                  
+{
+
+    ##################### read parameters ######################
+    
+    $in_w = $opt_i;
+    $mark_w = $opt_m;
+    $method_type_w = $opt_t;
+    $region_file_w = $opt_r;
+    if(length($opt_r) == 0)
+    {
+      $region_file_w = "";
+    }
+    
+    $bin_size_w = (length($opt_b) > 0)? ($opt_b):200;
+    $genome_length_w = (length($opt_g) > 0)? ($opt_g):3107677273;
+    
+    $r_file_w = ($r_direct ne "")?($r_direct):($opt_R);
+    
+  
+    printf "BedGraph file of ChIP-seq data: %s\nidentifier for output files: %s\nparameter estimation method: %s\nthe file of genomic regions for parameter estimation: %s\ngenomic bin size: %d\ngenome size: %d\ndirectory of R program: %s\n",$in_w,$mark_w,$method_type_w,$region_file_w,$bin_size_w,$genome_length_w,$r_file_w;
+    ### show all the parameters used ###
+    
+    printf "Checking the format of the input file......\n";
+    $check_in = $in_w;
+    open CHECK,"$check_in" or die "Error: The input file does not exist!\n";
+    @check_line = <CHECK>;
+    close(CHECK);
+    
+    $check_flag = 0;
+    
+    
+    if($#check_line < 2)
+    {
+       $check_flag = 1; 
+       #printf "Warning: No records found in the input file\n";
+    }
+    else
+    {
+       for($cx=1;$cx<=$#check_line;$cx++)
+       {
+         @check_temp = split(/\s+/,$check_line[$cx]);
+         if($#check_temp < 3)
+         {
+            $check_flag = 2;
+         }
+         else
+         {
+            if(!($check_line[$cx] =~ /^chr.*\t[0-9]+\t[0-9]+\t[^a-zA-Z].*/))
+            {
+               $check_flag = 3;
+            }
+         }
+       }
+       
+    }
+    @check_line = ();
+
+    if($check_flag == 1)
+    {
+       printf "Warning: No records found in the input file\n";
+    }
+    elsif($check_flag == 2)
+    {
+       printf "Warning: There should be at least 4 columns in the BedGraph file\n";
+    }
+    elsif($check_flag == 3)
+    {
+       printf "Warning: The format of the BedGraph file is not appropriate\n";
+    }
+    
+    else
+    {
+    printf "The format of the input BedGraph file is correct.\n";
+    
+    ##################### start broad peak calling #########################
+    
+    $command_project = "mkdir ".$mark_w;
+    system($command_project);                     ### create the project folder
+    printf "the project folder %s built\n",$mark_w;
+    
+    
+    pre_process($in_w,$mark_w,$bin_size_w,$genome_length_w);
+    printf "pre_processing finished\n";
+    
+    if($method_type_w eq "supervised")
+    {
+         supervised_estimation($in_w,$mark_w,$bin_size_w,$genome_length_w,$region_file_w);   
+         printf "supervised parameter estimation finished\n";
+         
+         assign_score($in_w,$mark_w,$bin_size_w,$genome_length_w,$method_type_w);
+         printf "score strings created\n";
+         
+         maximal_seg($mark_w,$bin_size_w,$genome_length_w,$method_type_w);
+         printf "broad peak calling finished\n";
+    }
+    else
+    {
+         scan($in_w,$mark_w,$bin_size_w,$genome_length_w,$method_type_w);
+         format_unsupervise($in_w,$mark_w,$bin_size_w,$genome_length_w,$method_type_w);
+         printf "regions for unsupervised estimation generated\n";
+         
+         $folder = $mark_w."/unsupervised_estimation";
+         $command = "mkdir ".$folder;
+         system($command);
+         
+         $command_R = $r_file_w." CMD BATCH --no-save --no-restore \'--args identifier=\"".$mark_w."\"\' ".$script_directory."/unsupervised_estimation.R";
+         system($command_R);
+         
+         printf "unsupervised parameter estimation finished\n";
+         
+         assign_score($in_w,$mark_w,$bin_size_w,$genome_length_w,$method_type_w);
+	 printf "score strings created\n";
+	          
+	 maximal_seg($mark_w,$bin_size_w,$genome_length_w,$method_type_w);
+         printf "broad peak calling finished\n";
+    }
+    
+    }
+
+}#end of else
+
+
+
+
+#####################################################################################################################################################################################
+
+
+
+
+####################**************************************   functions  ************************************##########################
+####################****************************************************************************************##########################
+####################****************************************************************************************##########################
+####################****************************************************************************************##########################
+####################****************************************************************************************##########################
+####################**************************************   functions  ************************************##########################
+
+
+
+###############################################  pre_process  ##############################################
+
+sub pre_process
+{
+   my $in = $_[0];
+   open(IN,"$in");
+   my @line = <IN>;
+   close(IN);
+   
+   my $mark = $_[1];
+   my $bin_size = $_[2];
+   my $genome_length = $_[3];
+   
+   my $output_folder = $mark."/pre_process_files";
+   $command = "mkdir ".$output_folder;
+   system($command);
+   
+   #################################################
+
+   my $total_tag = 0;
+   my @chrom_list = ();
+   my $c = 0;
+   
+   my @temp = split(/\s+/,$line[1]);
+   my $chr = $temp[0];
+   
+   my $output = $output_folder."/".$mark."_".$chr.".bed";
+   open(OUT,">$output");
+   $prev = select(OUT);
+   
+   printf "%d\t%d\n",$temp[1],$temp[3];
+   my $site_pre = $temp[1];
+   $total_tag += $temp[3];
+   
+   $chrom_list[$c] = $chr;
+   $c ++;
+   
+   my $i = 2;
+   my $dist = 0;
+   my $bin_num = 0;
+   my $j = 1;
+   
+   for($i=2;$i<=$#line;$i++)
+   {
+       
+       chop($line[$i]);
+       @temp = split(/\s+/,$line[$i]);
+       
+       if($temp[0] eq $chr)
+       {
+            $dist = $temp[1] - $site_pre;
+            $bin_num = int($dist/$bin_size);
+            
+            for($j=1;$j<$bin_num;$j++)
+            {
+               printf "%d\t0\n",$site_pre+$j*$bin_size;
+            }
+            
+            printf "%d\t%d\n",$temp[1],$temp[3];
+            $site_pre = $temp[1];
+            $total_tag += $temp[3];
+       }
+       else
+       {
+            close(OUT);
+            select($prev);
+            
+            $chr = $temp[0];
+            
+            $output = $output_folder."/".$mark."_".$chr.".bed";
+   	    open(OUT,">$output");
+   	    $prev = select(OUT);
+   	 
+            printf "%d\t%d\n",$temp[1],$temp[3];
+            $site_pre = $temp[1];
+            $total_tag += $temp[3];
+            
+            $chrom_list[$c] = $chr;
+            $c ++;
+       }
+       
+   }
+   
+   
+   close(OUT);
+   select($prev);
+   
+   ################################################
+   
+   my $chr_file = $output_folder."/".$mark."_chromosome.txt";
+   open(OUT,">$chr_file");
+   $prev = select(OUT);
+   
+   my $k = 0;
+   for($k=0;$k<$c;$k++)
+   {
+      printf "%s\n",$chrom_list[$k];
+   }
+   
+   close(OUT);
+   select($prev);
+   
+   
+   ################################################
+   
+   my $lamda = ($total_tag/$genome_length)*$bin_size;
+   
+   my $lamda_file = $output_folder."/".$mark."_lamda.txt";
+   open(OUT,">$lamda_file");
+   $prev = select(OUT);
+   
+   printf "lamda\t%f\n",$lamda;
+   
+   printf "genome_length\t%d\n",$genome_length;
+   printf "total_tag\t%d\n",$total_tag;
+   printf "bin_size\t%d\n",$bin_size;
+   
+   close(OUT);
+   select($prev);
+   
+   ################################################
+   
+   my $p_th = 0.00001;
+   my $p_inverse = 1/$p_th;
+   my $threshold = int((1+sqrt(log($p_inverse)/$lamda))*$lamda+1)+1;
+   
+   my $threshold_file = $output_folder."/".$mark."_Poisson_threshold.txt";
+   open(OUT,">$threshold_file");
+   $prev = select(OUT);
+   
+   printf "%f\t%d\n",$p_th,$threshold;
+   
+   close(OUT);
+   select($prev);
+}
+
+
+###############################################  supervised_estimation  ##############################################
+
+sub supervised_estimation
+{
+     
+     my $input_file = $_[0];        
+     my $mark = $_[1];
+     my $bin_size = $_[2];
+     my $genome_length = $_[3];
+     my $in = $_[4];
+     open(IN,"$in");
+     my @region = <IN>;
+     close(IN);
+        
+     my $output_folder = $mark."/supervised_estimation";
+     $command = "mkdir ".$output_folder;
+     system($command);
+        
+     #################################################
+     
+     $in = $mark."/pre_process_files/".$mark."_Poisson_threshold.txt";
+     open(IN,"$in");
+     my @data = <IN>;
+     close(IN);
+     chop($data[0]);
+     my @temp = split(/\s+/,$data[0]);
+     
+     my $threshold = $temp[1];
+     
+     ###########################################################
+     
+     $in = $input_file;
+     open(IN,"$in");
+     my @line = <IN>;
+     close(IN);
+     
+     my $count = 0;
+     my $i = 1;
+     for($i=1;$i<=$#line;$i++)
+     {
+        chop($line[$i]);
+        @temp = split(/\s+/,$line[$i]);
+        if($temp[3] > $threshold)
+        {
+           $count ++;
+        }
+        
+     }
+     
+     my $total_count = int($genome_length/$bin_size);
+     
+     my $q = $count/$total_count;
+     
+     ###########################################################
+
+     my $count_2 = 0;
+     my $total_count_2 = 0;
+     my $length = 0;
+     
+     my $chr = "";
+     my $start = 0;
+     my $stop = 0;
+     my $processed_file = "";
+     my $j = 0;
+     my @line = ();
+     
+     for($i=0;$i<=$#region;$i++)
+     {
+         
+         chop($region[$i]);
+         @temp = split(/\s+/,$region[$i]);
+         $chr = $temp[0];
+         $start = $temp[1];
+         $stop = $temp[2];
+         
+         $length += ($stop - $start + 1);
+         
+         $processed_file = $mark."/pre_process_files/".$mark."_".$chr.".bed";
+         open(IN,"$processed_file");
+         @line = <IN>;
+         close(IN);
+         
+         for($j=0;$j<=$#line;$j++)
+         {
+            chop($line[$j]);
+            @temp = split(/\s+/,$line[$j]);
+            if(($temp[0] <= $stop) && ($temp[0] >= $start))
+            {
+               if($temp[1] > $threshold)
+               {
+                  $count_2 ++;
+               }
+            }
+         }
+         
+     }
+     
+     $total_count_2 = int($length/$bin_size);
+     
+     my $p = $count_2/$total_count_2;
+     
+     ###########################################################
+     
+     my $output_file = $output_folder."/supervised_parameter_score.txt";
+     open(OUT,">$output_file");
+     $prev = select(OUT);
+     
+     printf "p\t%f\n",$p;
+     printf "q\t%f\n",$q;
+     printf "s1\t%f\n",log($p/$q);
+     printf "s2\t%f\n",log((1-$p)/(1-$q));
+     
+     close(OUT);
+     select($prev);
+   
+}
+
+
+###############################################  scan  ##############################################
+
+sub scan
+{
+     my $input_file = $_[0];
+     my $mark = $_[1];
+     my $bin_size = $_[2];
+     my $genome_length = $_[3];
+     my $method_type = $_[4];
+     
+     my $output_folder = $mark."/region_for_unsupervised_estimation";
+     my $command = "mkdir ".$output_folder;
+     system($command);
+     
+     my $win_size = 10000;
+     
+     ##############################################################################
+     
+     my $in = $mark."/pre_process_files/".$mark."_Poisson_threshold.txt";
+     open(IN,"$in");
+     my @th_line = <IN>;
+     chop($th_line[0]);
+     my @temp = split(/\s+/,$th_line[0]);
+     my $tag_th = $temp[1];  ###
+     close(IN);
+     
+     ##############################################################################
+     
+     $in = $input_file;
+     open(IN,"$in");
+     my @line = <IN>;
+     my $count = 0;
+     my $i=1;
+     for($i=1;$i<=$#line;$i++)
+     {
+        chop($line[$i]);
+        @temp = split(/\s+/,$line[$i]);
+        if($temp[3] > $tag_th)
+        {
+              $count ++;
+        }
+     }
+     close(IN);
+     
+     my $total_count = int($genome_length/$bin_size);
+     my $back_frac = $count/$total_count;  ###
+     
+     ##############################################################################
+     
+     $in = $mark."/pre_process_files/".$mark."_chromosome.txt"; ###
+     open(IN,"$in");
+     my @chrom = <IN>;
+     close(IN);
+     my @chr = ();
+     for($i=0;$i<=$#chrom;$i++)
+     {
+        chop($chrom[$i]);
+        $chr[$i] = $chrom[$i];
+     }
+     
+     ##############################################################################
+     
+     my $out = $output_folder."/trial_regions.bed";  ###
+     open(OUT,">$out");
+     $prev = select(OUT);
+     
+     my $bin_num = $win_size/$bin_size; ###
+     @line = ();
+     
+     my $c = 0;
+     my $in_file = "";
+     my @index = ();
+     my $count = 0;
+     my $j = 0;
+     my $density = 0;
+     
+     for($c=0;$c<=$#chrom;$c++)
+     {
+           $in_file = $mark."/pre_process_files/".$mark."_".$chr[$c].".bed";
+           open(IN,"$in_file");
+           @line = <IN>;
+           close(IN);
+           for($i=0;$i<=$#line;$i++)
+           {
+               chop($line[$i]);
+           }
+     
+           @index = ();
+           for($i=0;$i<=$#line;$i++)
+           {
+              $index[$i] = 0;
+           }
+     
+     
+           for($i=0;$i<=$#line;$i=$i+$bin_num)
+           {
+              $count = 0;
+          
+              for($j=$i;$j<$i+$bin_num;$j++)
+              {
+                    @temp = split(/\s+/,$line[$j]);
+                    if($temp[1] > $tag_th)
+                    {
+                       $count ++;
+                    }
+              }
+          
+              $density = $count/$bin_num;
+              if($density > 2*$back_frac)
+              {
+                 for($j=$i;$j<$i+$bin_num;$j++)
+                 {
+                     $index[$j] = 1;
+                 }
+              } 
+           }
+     
+           for($i=0;$i<$#line;$i++)
+           {
+              if(($index[$i] == 0) && ($index[$i+1] == 1) && (($i-$bin_num) > 1) && ($i+$bin_num < $#line))
+              {
+                 #@temp = split(/\s+/,$line[$i-$bin_num]);
+                 #printf "%d\t",$i-$bin_num;
+                 #@temp = split(/\s+/,$line[$i+$bin_num]);
+                 #printf "%d\n",$i+$bin_num;
+           
+                 for($k=$i-$bin_num;$k<$i+$bin_num;$k++)
+                 {
+                     @temp = split(/\s+/,$line[$k]);
+                     printf "%d\t",$temp[1];
+                 }
+                 @temp = split(/\s+/,$line[$i+$bin_num]);
+                 printf "%d\n",$temp[1];
+              }
+           }
+     
+     
+     
+     }
+     
+     
+     close(OUT);
+     select($prev);
+}
+
+###############################################  format_unsupervise  ##############################################
+
+sub format_unsupervise
+{
+     my $input_file = $_[0];
+     my $mark = $_[1];
+     my $bin_size = $_[2];
+     my $genome_length = $_[3];
+     my $method_type = $_[4];
+     
+     my $win_size = 10000;
+     my $win = 5;
+     
+     my $output_folder = $mark."/region_for_unsupervised_estimation";
+     
+     ###########################################################
+     
+     my $in = $output_folder."/trial_regions.bed";
+     open(IN,"$in");
+     my @line = <IN>;
+     my $i=0;
+     for($i=0;$i<=$#line;$i++)
+     {
+        chop($line[$i]);
+     }
+     close(IN);
+     
+     ###########################################################
+     
+     $in = $mark."/pre_process_files/".$mark."_Poisson_threshold.txt";
+     open(IN,"$in");
+     my @th_line = <IN>;
+     chop($th_line[0]);
+     my @temp = split(/\s+/,$th_line[0]);
+     my $tag_th = $temp[1];  ###
+     close(IN);
+     
+     ###########################################################
+     
+     my $out = $output_folder."/data_for_estimation.bed";
+     open(OUT,">$out");
+     $prev = select(OUT);
+        
+     my $num = 0;
+     my @series = ();
+     my $k = 0;
+     my $j = 0;
+     
+     for($i=0;$i<=$#line;$i++)
+     {
+     
+          @temp = split(/\s+/,$line[$i]);
+          
+          $num = int(($#temp+1)/$win);
+          
+          @series = ();
+          for($k=0;$k<$num;$k++)
+          { 
+             $series[$k] = 0;   
+          }
+          
+          for($j=0;$j<$num*$win;$j++)
+          {
+             
+             if($temp[$j] > $tag_th)
+             {
+                $series[int($j/$win)] ++;
+             }
+             
+             
+          }
+     
+          for($k=0;$k<$num-1;$k++)
+          { 
+                 printf "%d\t",$series[$k];   
+          }
+          printf "%d\n",$series[$num-1];
+     }
+     
+     
+     
+     
+     close(OUT);
+     select($prev);
+     
+}
+
+
+###############################################  assign_score  ##############################################
+
+sub assign_score
+{
+     my $input_file = $_[0];
+     my $mark = $_[1];
+     my $bin_size = $_[2];
+     my $genome_length = $_[3];
+     my $method_type = $_[4];
+     
+     my $output_folder = $mark."/score_string";
+     my $command = "mkdir ".$output_folder;
+     system($command);
+     
+     ###########################################################
+     
+     my $score_file = $mark."/".$method_type."_estimation/".$method_type."_parameter_score.txt";
+     open(IN,"$score_file");
+     my @parameter = <IN>;
+     close(IN);
+     
+     chop($parameter[2]);
+     chop($parameter[3]);
+     my @temp = split(/\s+/,$parameter[2]);
+     my $s1 = $temp[1];
+     
+     @temp = split(/\s+/,$parameter[3]);
+     my $s2 = $temp[1];
+     
+     ######################################################
+     
+     my $threshold_file = $mark."/pre_process_files/".$mark."_Poisson_threshold.txt";
+     open(IN,"$threshold_file");
+     my @line = <IN>;
+     close(IN);
+     chop($line[0]);
+     @temp = split(/\s+/,$line[0]);
+     
+     my $threshold = $temp[1];
+     
+     ######################################################
+     
+     my $chrom_file = $mark."/pre_process_files/".$mark."_chromosome.txt";
+     open(IN,"$chrom_file");
+     @line = <IN>;
+     close(IN);
+     my @chrom_list = ();
+     
+     my $i=0;
+     my $chrom_num = $#line + 1;
+     for($i=0;$i<=$#line;$i++)
+     {
+       chop($line[$i]);
+       $chrom_list[$i] = $line[$i];
+     }
+     
+     ######################################################
+     
+     @line = ();
+     my $in = "";
+     my $out = "";
+     my $j = 0;
+     for($i=0;$i<$chrom_num;$i++)
+     {
+        $in = $mark."/pre_process_files/".$mark."_".$chrom_list[$i].".bed";
+        open(IN,"$in");
+        @line = <IN>;
+        close(IN);
+        
+        $out = $output_folder."/".$mark."_".$chrom_list[$i]."_score_string.bed";
+        open(OUT,">$out");
+        $prev = select(OUT);
+        
+        
+        for($j=0;$j<=$#line;$j++)
+        {
+           chop($line[$j]);
+           @temp = split(/\s+/,$line[$j]);
+           
+           if($temp[1] > $threshold)
+           {
+              printf "%d\t%f\n",$temp[0],$s1;
+           }
+           else
+           {
+              printf "%d\t%f\n",$temp[0],$s2;
+           }
+        }
+        
+        
+        close(OUT);
+        select($prev);
+        
+    }
+}
+
+
+###############################################  maximal_seg  ##############################################
+
+sub maximal_seg
+{
+     
+     my $mark = $_[0];
+     my $bin_size = $_[1];
+     my $genome_length = $_[2];
+     $method_type = $_[3];
+     
+     my $output_folder = $mark."/".$mark."_broad_peak_".$method_type;
+     $command = "mkdir ".$output_folder;
+     system($command);
+    
+     ######################################################
+     
+     my $chrom_file = $mark."/pre_process_files/".$mark."_chromosome.txt";
+     open(IN,"$chrom_file");
+     my @chrom_line = <IN>;
+     close(IN);
+     my @chrom_list = ();
+     my $i=0;
+     
+     for($i=0;$i<=$#chrom_line;$i++)
+     {
+        chop($chrom_line[$i]);
+        $chrom_list[$i] = $chrom_line[$i];
+     }
+     
+     my $chrom_num = $#chrom_line + 1;
+     
+     ########################################################################
+     
+     my $score_file = $mark."/".$method_type."_estimation/".$method_type."_parameter_score.txt";
+     open(IN,"$score_file");
+     my @parameter = <IN>;
+     close(IN);
+     
+     chop($parameter[1]);
+     chop($parameter[2]);
+     chop($parameter[3]);
+     
+     my @temp = split(/\s+/,$parameter[1]);
+     my $back_prob = $temp[1];
+     
+     @temp = split(/\s+/,$parameter[2]);
+     my $s1 = $temp[1];
+     
+     @temp = split(/\s+/,$parameter[3]);
+     my $s2 = $temp[1];
+ 
+     ########################################################################
+     
+     my $out_file = $output_folder."/".$mark."_broad_peak_".$method_type.".bed";
+     open(OUT,">$out_file");
+     $prev = select(OUT);
+     
+     printf "track name=\"%s_broad_peak_%s\"\n",$mark,$method_type;
+     
+     my $ch = 0;
+     my @data = ();
+     my $in_file = "";
+     my @chr_pos = ();
+     my @seq = ();
+     my $index_k = 0;
+     my $index_j = 0;
+     my @start = ();
+     my @stop = ();
+     my @L_score = ();
+     my @R_score = ();
+     my $current_score = 0;
+     my $flag = 0;
+     my $j = 0;
+     my $block_len = 0;
+     my $cum_score = 0;
+     my $pos_bin = 0;
+     my $neg_bin = 0;
+     my $pos_frac = 0;
+     
+     for($ch=0;$ch<$chrom_num;$ch++)
+     {
+          $chr = $chrom_list[$ch];
+     
+          @data = ();
+     
+          $in_file = $mark."/score_string/".$mark."_".$chr."_score_string.bed";
+          open(IN,"$in_file");
+          @data = <IN>;
+          close(IN);
+     
+          @chr_pos=();
+          @seq=();
+     
+          for($i=0;$i<=$#data;$i++)
+          {
+             chop($data[$i]);
+             @temp = split(/\s+/,$data[$i]);
+             $chr_pos[$i] = $temp[0];
+             $seq[$i] = $temp[1];
+          }
+     
+          $index_k = 0;
+          $index_j = 0;
+     
+          @start=();
+          @stop=();
+          @L_score=();
+          @R_score=();
+     
+          $current_score = 0;
+     
+     
+          for($i=0;$i<$#data;$i++)
+          {
+             if($seq[$i] > 0)
+             {
+                $start[$index_k] = $i;
+                $stop[$index_k] = $i;
+                $L_score[$index_k] = $current_score;
+                $R_score[$index_k] = $current_score + $seq[$i];
+           
+                $flag = 0;
+           
+                while($flag == 0)
+                {
+                   $j = $index_k-1;
+                   until(($L_score[$j] < $L_score[$index_k]) || ($j == -1))
+                   {
+                     $j --;
+                   }
+                   if($j == -1)
+                   {
+                     $flag = 1;
+                   }
+              
+                   else
+                   {
+                      $index_j = $j;
+                      if($R_score[$index_j] >= $R_score[$index_k])
+                      {
+                         $flag = 1;
+                      }
+                      else
+                      {
+                         $stop[$index_j] = $i;
+                         $R_score[$index_j] = $current_score + $seq[$i];
+                    
+                         for($x=$index_j+1;$x<=$index_k;$x++)
+                         {
+                           $start[$x] = 0;
+                           $stop[$x] = 0;
+                           $L_score[$x] = 0;
+                           $R_score[$x] = 0;
+                         }
+                    
+                         $index_k = $index_j;
+                    
+                    
+                      }
+                   }
+              
+                }
+                $index_k ++;
+           
+             }
+        
+        
+             $current_score += $seq[$i];
+          }
+     
+          for($i=0;$i<$index_k;$i++)
+          {
+              if(($chr_pos[$stop[$i]]-$chr_pos[$start[$i]]+1) > 1)
+              {
+                 #printf "%s\t%d\t%d\t%d\t%f\t%f\n",$chr,$chr_pos[$start[$i]],$chr_pos[$stop[$i]],$chr_pos[$stop[$i]]-$chr_pos[$start[$i]]+1,$L_score[$i],$R_score[$i];
+                 
+                 $block_len = int(($chr_pos[$stop[$i]] - $chr_pos[$start[$i]] + $bin_size)/$bin_size)+1;
+                 $cum_score = $R_score[$i] - $L_score[$i];
+                 
+                 $pos_bin = ($cum_score - $block_len*$s2)/($s1-$s2);
+                 $neg_bin = $block_len - $pos_bin;
+                 $pos_frac = $pos_bin/$block_len;
+                 
+                 #printf "%s\t%d\t%d\t%d\t%f\t%f\n",$chr,$chr_pos[$start[$i]],$chr_pos[$stop[$i]]+$bin_size,$block_len*$bin_size,$cum_score,$pos_frac;
+                 
+                 $t_value = ($pos_frac - $back_prob)/sqrt($back_prob*(1-$back_prob)/$block_len);
+                 
+                 if($t_value >= 1.96)
+                 {
+                    printf "%s\t%d\t%d\n",$chr,$chr_pos[$start[$i]],$chr_pos[$stop[$i]]+$bin_size;
+                 }
+                 
+              }
+          }
+     
+     
+     }
+     
+     
+     
+     close(OUT);
+     select($prev);
+     
+}
+
+
+
+
+
+
+
+
+
+
+
+
