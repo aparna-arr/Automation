@@ -26,11 +26,11 @@ LAURA_ADAPTORS=adaptors_laura.fa
 
 # rep1 and rep2 trimmed fastq files
 BRCA1_rep1_fastq=BRCA1_rep1.trim.fastq
-BRCA1_rep2_fastq=BRCA1_rep1.trim.fastq
+BRCA1_rep2_fastq=BRCA1_rep2.trim.fastq
 RPA_rep1_fastq=RPA_rep1.trim.fastq
-RPA_rep2_fastq=RPA_rep1.trim.fastq
-SMC5_rep1_fastq=RPA_rep1.trim.fastq
-SMC5_rep2_fastq=RPA_rep1.trim.fastq
+RPA_rep2_fastq=RPA_rep2.trim.fastq
+SMC5_rep1_fastq=SMC5_rep1.trim.fastq
+SMC5_rep2_fastq=SMC5_rep2.trim.fastq
 
 WCE_rep1_fastq=wce_rep1.fastq
 WCE_rep2_fastq=wce_rep2.fastq
@@ -74,7 +74,7 @@ SMC5_bin=SMC5_merge_10bp_bin.bedgraph
 WCE_bin=WCE_merge_10bp_bin.bedgraph
 
 # broadpeak files
-BRCA1_broad=BRCA1/BRCA1_broad_peak_unsupervised/BRCA1_broad_peak_unsuperivised.bed 
+BRCA1_broad=BRCA1/BRCA1_broad_peak_unsupervised/BRCA1_broad_peak_unsupervised.bed 
 RPA_broad=RPA/RPA_broad_peak_unsupervised/RPA_broad_peak_unsupervised.bed
 SMC5_broad=SMC5/SMC5_broad_peak_unsupervised/SMC5_broad_peak_unsupervised.bed
 
@@ -102,107 +102,131 @@ RPA_xls=RPA_xls_peaksplit_WCE_result.xls
 SMC5_xls=SMC5_xls_peaksplit_WCE_result.xls
 
 # trim fastq files
-./fastq-mcf -C 10000000 -u -x 0.01 -q 25 $ADAPTORS $BRCA1_rep1_raw_fastq > $BRCA1_rep1_fastq 
-./fastq-mcf -C 10000000 -u -x 0.01 -q 25 $ADAPTORS $BRCA1_rep2_raw_fastq > $BRCA1_rep2_fastq 
-./fastq-mcf -C 10000000 -u -x 0.01 -q 25 $ADAPTORS $RPA_rep1_raw_fastq > $RPA_rep1_fastq 
-./fastq-mcf -C 10000000 -u -x 0.01 -q 25 $ADAPTORS $RPA_rep2_raw_fastq > $RPA_rep2_fastq 
-./fastq-mcf -C 10000000 -u -x 0.01 -q 25 $ADAPTORS $SMC5_rep1_raw_fastq > $SMC5_rep1_fastq 
-./fastq-mcf -C 10000000 -u -x 0.01 -q 25 $ADAPTORS $SMC5_rep2_raw_fastq > $SMC5_rep2_fastq 
+#./fastq-mcf -C 10000000 -u -x 0.01 -q 25 $ADAPTORS $BRCA1_rep1_raw_fastq > $BRCA1_rep1_fastq 
+#./fastq-mcf -C 10000000 -u -x 0.01 -q 25 $ADAPTORS $BRCA1_rep2_raw_fastq > $BRCA1_rep2_fastq 
+#./fastq-mcf -C 10000000 -u -x 0.01 -q 25 $ADAPTORS $RPA_rep1_raw_fastq > $RPA_rep1_fastq 
+#./fastq-mcf -C 10000000 -u -x 0.01 -q 25 $ADAPTORS $RPA_rep2_raw_fastq > $RPA_rep2_fastq 
+#./fastq-mcf -C 10000000 -u -x 0.01 -q 25 $ADAPTORS $SMC5_rep1_raw_fastq > $SMC5_rep1_fastq 
+#./fastq-mcf -C 10000000 -u -x 0.01 -q 25 $ADAPTORS $SMC5_rep2_raw_fastq > $SMC5_rep2_fastq 
 
 # NOTE: in original, the adaptor list was ONLY the laura adaptors, and the -l was used
-./fastq-mcf -C 10000000 -u -x 0.01 -q 25 -l 35 $LAURA_ADAPTORS $WCE_rep1_raw_fastq > $WCE_rep1_fastq 
-./fastq-mcf -C 10000000 -u -x 0.01 -q 25 -l 35 $LAURA_ADAPTORS $WCE_rep2_raw_fastq > $WCE_rep2_fastq 
-./fastq-mcf -C 10000000 -u -x 0.01 -q 25 -l 35 $LAURA_ADAPTORS $WCE_rep3_raw_fastq > $WCE_rep3_fastq 
-./fastq-mcf -C 10000000 -u -x 0.01 -q 25 -l 35 $LAURA_ADAPTORS $WCE_rep4_raw_fastq > $WCE_rep4_fastq 
-./fastq-mcf -C 10000000 -u -x 0.01 -q 25 -l 35 $LAURA_ADAPTORS $WCE_rep5_raw_fastq > $WCE_rep5_fastq 
+#./fastq-mcf -C 10000000 -u -x 0.01 -q 25 -l 35 $LAURA_ADAPTORS $WCE_rep1_raw_fastq > $WCE_rep1_fastq 
+#./fastq-mcf -C 10000000 -u -x 0.01 -q 25 -l 35 $LAURA_ADAPTORS $WCE_rep2_raw_fastq > $WCE_rep2_fastq 
+#./fastq-mcf -C 10000000 -u -x 0.01 -q 25 -l 35 $LAURA_ADAPTORS $WCE_rep3_raw_fastq > $WCE_rep3_fastq 
+#./fastq-mcf -C 10000000 -u -x 0.01 -q 25 -l 35 $LAURA_ADAPTORS $WCE_rep4_raw_fastq > $WCE_rep4_fastq 
+#./fastq-mcf -C 10000000 -u -x 0.01 -q 25 -l 35 $LAURA_ADAPTORS $WCE_rep5_raw_fastq > $WCE_rep5_fastq 
 
 # convert fastq to bam
-bowtie2 -x $BOWTIE_INDEX -U $BRCA1_rep1_fastq -S tmpsam
-samtools view -bS tmpsam > $BRCA1_rep1_bam
-rm tmpsam 
-bowtie2 -x $BOWTIE_INDEX -U $BRCA1_rep2_fastq -S tmpsam
-samtools view -bS tmpsam > $BRCA1_rep2_bam
-rm tmpsam 
+#bowtie2 -x $BOWTIE_INDEX -U $BRCA1_rep1_fastq -S tmpsam
+#samtools view -bS tmpsam > $BRCA1_rep1_bam
+#rm tmpsam 
+#bowtie2 -x $BOWTIE_INDEX -U $BRCA1_rep2_fastq -S tmpsam
+#samtools view -bS tmpsam > $BRCA1_rep2_bam
+#rm tmpsam 
+#
+#bowtie2 -x $BOWTIE_INDEX -U $RPA_rep1_fastq -S tmpsam
+#samtools view -bS tmpsam > $RPA_rep1_bam
+#rm tmpsam 
+#bowtie2 -x $BOWTIE_INDEX -U $RPA_rep2_fastq -S tmpsam
+#samtools view -bS tmpsam > $RPA_rep2_bam
+#rm tmpsam 
+#
+#bowtie2 -x $BOWTIE_INDEX -U $SMC5_rep1_fastq -S tmpsam
+#samtools view -bS tmpsam > $SMC5_rep1_bam
+#rm tmpsam 
+#bowtie2 -x $BOWTIE_INDEX -U $SMC5_rep2_fastq -S tmpsam
+#samtools view -bS tmpsam > $SMC5_rep2_bam
+#rm tmpsam 
 
-bowtie2 -x $BOWTIE_INDEX -U $RPA_rep1_fastq -S tmpsam
-samtools view -bS tmpsam > $RPA_rep1_bam
-rm tmpsam 
-bowtie2 -x $BOWTIE_INDEX -U $RPA_rep2_fastq -S tmpsam
-samtools view -bS tmpsam > $RPA_rep2_bam
-rm tmpsam 
-
-bowtie2 -x $BOWTIE_INDEX -U $SMC5_rep1_fastq -S tmpsam
-samtools view -bS tmpsam > $SMC5_rep1_bam
-rm tmpsam 
-bowtie2 -x $BOWTIE_INDEX -U $SMC5_rep2_fastq -S tmpsam
-samtools view -bS tmpsam > $SMC5_rep2_bam
-rm tmpsam 
-
-bowtie2 -x $BOWTIE_INDEX -U $WCE_rep1_fastq -S tmpsam
-samtools view -bS tmpsam > $WCE_rep1_bam
-rm tmpsam 
-bowtie2 -x $BOWTIE_INDEX -U $WCE_rep2_fastq -S tmpsam
-samtools view -bS tmpsam > $WCE_rep2_bam
-rm tmpsam 
-bowtie2 -x $BOWTIE_INDEX -U $WCE_rep3_fastq -S tmpsam
-samtools view -bS tmpsam > $WCE_rep3_bam
-rm tmpsam 
-bowtie2 -x $BOWTIE_INDEX -U $WCE_rep4_fastq -S tmpsam
-samtools view -bS tmpsam > $WCE_rep4_bam
-rm tmpsam 
-bowtie2 -x $BOWTIE_INDEX -U $WCE_rep5_fastq -S tmpsam
-samtools view -bS tmpsam > $WCE_rep5_bam
-rm tmpsam 
+#bowtie2 -x $BOWTIE_INDEX -U $WCE_rep1_fastq -S tmpsam
+#samtools view -bS tmpsam > $WCE_rep1_bam
+#rm tmpsam 
+#bowtie2 -x $BOWTIE_INDEX -U $WCE_rep2_fastq -S tmpsam
+#samtools view -bS tmpsam > $WCE_rep2_bam
+#rm tmpsam 
+#bowtie2 -x $BOWTIE_INDEX -U $WCE_rep3_fastq -S tmpsam
+#samtools view -bS tmpsam > $WCE_rep3_bam
+#rm tmpsam 
+#bowtie2 -x $BOWTIE_INDEX -U $WCE_rep4_fastq -S tmpsam
+#samtools view -bS tmpsam > $WCE_rep4_bam
+#rm tmpsam 
+#bowtie2 -x $BOWTIE_INDEX -U $WCE_rep5_fastq -S tmpsam
+#samtools view -bS tmpsam > $WCE_rep5_bam
+#rm tmpsam 
 
 # merge rep1 and rep2 bam files
-samtools merge -f $BRCA1_bam $BRCA1_rep1_bam $BRCA1_rep2_bam
-samtools merge -f $RPA_bam $RPA_rep1_bam $RPA_rep2_bam
-samtools merge -f $SMC5_bam $SMC5_rep1_bam $SMC5_rep2_bam
+#samtools merge -f $BRCA1_bam $BRCA1_rep1_bam $BRCA1_rep2_bam
+#samtools merge -f $RPA_bam $RPA_rep1_bam $RPA_rep2_bam
+#samtools merge -f $SMC5_bam $SMC5_rep1_bam $SMC5_rep2_bam
 
-samtools merge -f $WCE_bam $WCE_rep1_bam $WCE_rep2_bam $WCE_rep3_bam $WCE_rep4_bam $WCE_rep5_bam
+#samtools merge -f $WCE_bam $WCE_rep1_bam $WCE_rep2_bam $WCE_rep3_bam $WCE_rep4_bam $WCE_rep5_bam
 
 # convert bam files to sam files
-samtools view -h $BRCA1_bam > $BRCA1_sam
-samtools view -h $RPA_bam > $RPA_sam
-samtools view -h $SMC5_bam > $SMC5_sam
+#samtools view -h $BRCA1_bam > $BRCA1_sam
+#samtools view -h $RPA_bam > $RPA_sam
+#samtools view -h $SMC5_bam > $SMC5_sam
 
-samtools view -h $WCE_bam > $WCE_sam
+#samtools view -h $WCE_bam > $WCE_sam
 
 # bin files
-./read_depth.pl 10 1 $BRCA1_sam > $BRCA1_bin
-./read_depth.pl 10 1 $RPA_sam > $RPA_bin
-./read_depth.pl 10 1 $SMC5_sam > $SMC5_bin
+#echo "BRCA1 binning"
+#./read_depth.pl 10 1 $BRCA1_sam > $BRCA1_bin
+#echo "RPA binning"
+#./read_depth.pl 10 1 $RPA_sam > $RPA_bin
+#echo "SMC5 binning"
+#./read_depth.pl 10 1 $SMC5_sam > $SMC5_bin
 
-./read_depth.pl 10 1 $WCE_sam > $WCE_bin
+#echo "WCE binning"
+#./read_depth.pl 10 1 $WCE_sam > $WCE_bin
 
 # clean bedgraphs
-./clean_bedgraphs.pl $BRCA1_bin BRCA1 mm9.chrom
-./clean_bedgraphs.pl $RPA_bin RPA mm9.chrom
-./clean_bedgraphs.pl $SMC5_bin SMC5 mm9.chrom
+#echo "cleaning bedgraphs"
+#./clean_bedgraphs.pl $BRCA1_bin BRCA1 mm9.chrom
+#./clean_bedgraphs.pl $RPA_bin RPA mm9.chrom
+#./clean_bedgraphs.pl $SMC5_bin SMC5 mm9.chrom
 
-./clean_bedgraphs.pl $WCE_bin WCE mm9.chrom
+#./clean_bedgraphs.pl $WCE_bin WCE mm9.chrom
 
 # run BroadPeak 
+echo "running BroadPeak"
 BroadPeak -i $BRCA1_bin  -m BRCA1 -g 2725765481 -t unsupervised -b 10
 BroadPeak -i $RPA_bin  -m RPA -g 2725765481 -t unsupervised -b 10
 BroadPeak -i $SMC5_bin  -m SMC5 -g 2725765481 -t unsupervised -b 10
 
 BroadPeak -i $WCE_bin  -m WCE -g 2725765481 -t unsupervised -b 10
 
+# fixing track line for PeakSplitter
+echo "fixing track line"
+
+tail -n +2 $BRCA1_broad > tmp
+mv tmp $BRCA1_broad
+
+tail -n +2 $RPA_broad > tmp
+mv tmp $RPA_broad
+
+tail -n +2 $SMC5_broad > tmp
+mv tmp $SMC5_broad
+
+tail -n +2 $WCE_broad > tmp
+mv tmp $WCE_broad
+
+
 # run PeakSplitter 
-$PeakSplitterDir/PeakSplitter -p $BRCA1_broad -w $BRCA1_broad -o . -u http://www.ensembl.org/~Cm38.reference/ -n 0
+echo "running PeakSplitter"
+$PeakSplitterDir/PeakSplitter -p $BRCA1_broad -w $BRCA1_bin -o . -u http://www.ensembl.org/~Cm38.reference/ -n 0
 cut -f 1,2,3 BRCA1_broad_peak_unsupervised.subpeaks.bed > $BRCA1_peaksplit
 
-$PeakSplitterDir/PeakSplitter -p $RPA_broad -w $RPA_broad -o . -u http://www.ensembl.org/~Cm38.reference/ -n 0
+$PeakSplitterDir/PeakSplitter -p $RPA_broad -w $RPA_bin -o . -u http://www.ensembl.org/~Cm38.reference/ -n 0
 cut -f 1,2,3 RPA_broad_peak_unsupervised.subpeaks.bed > $RPA_peaksplit
 
-$PeakSplitterDir/PeakSplitter -p $SMC5_broad -w $SMC5_broad -o . -u http://www.ensembl.org/~Cm38.reference/ -n 0
+$PeakSplitterDir/PeakSplitter -p $SMC5_broad -w $SMC5_bin -o . -u http://www.ensembl.org/~Cm38.reference/ -n 0
 cut -f 1,2,3 SMC5_broad_peak_unsupervised.subpeaks.bed > $SMC5_peaksplit
 
-$PeakSplitterDir/PeakSplitter -p $WCE_broad -w $WCE_broad -o . -u http://www.ensembl.org/~Cm38.reference/ -n 0
-cut -f 1,2,3 SMC5_broad_peak_unsupervised.subpeaks.bed > $WCE_peaksplit
+$PeakSplitterDir/PeakSplitter -p $WCE_broad -w $WCE_bin -o . -u http://www.ensembl.org/~Cm38.reference/ -n 0
+cut -f 1,2,3 WCE_broad_peak_unsupervised.subpeaks.bed > $WCE_peaksplit
 
 # get reads
+echo "getting reads"
 bamToBed -i $BRCA1_bam | cut -f 1,2,3,6 - > $BRCA1_reads
 bamToBed -i $RPA_bam | cut -f 1,2,3,6 - > $RPA_reads
 bamToBed -i $SMC5_bam | cut -f 1,2,3,6 - > $SMC5_reads
@@ -210,12 +234,15 @@ bamToBed -i $SMC5_bam | cut -f 1,2,3,6 - > $SMC5_reads
 bamToBed -i $WCE_bam | cut -f 1,2,3,6 - > $WCE_reads
 
 # run MAnorm for all three proteins
+echo "BRCA1 MAnorm"
 ./MAnorm.sh $BRCA1_peaksplit $WCE_peaksplit $BRCA1_reads $WCE_reads 25 25
 mv MAnorm_result.xls $BRCA1_xls
 
+echo "RPA MAnorm"
 ./MAnorm.sh $RPA_peaksplit $WCE_peaksplit $RPA_reads $WCE_reads 25 25
 mv MAnorm_result.xls $RPA_xls
 
+echo "SMC5 MAnorm"
 ./MAnorm.sh $SMC5_peaksplit $WCE_peaksplit $SMC5_reads $WCE_reads 25 25
 mv MAnorm_result.xls $SMC5_xls
 
@@ -229,11 +256,13 @@ M=2
 P=2
 
 # perform M and P value cutoff filter on all xls files
+echo "Filtering"
 awk -v Mval=$M -v Pval=$P '{if (($4 == "unique_peak1" || $4 == "common_peak1") && $7 > Mval && $9 > Pval) print $1 "\t" $2 "\t" $3;}' $BRCA1_xls > $BRCA1_xls\.filter 
 awk -v Mval=$M -v Pval=$P '{if (($4 == "unique_peak1" || $4 == "common_peak1") && $7 > Mval && $9 > Pval) print $1 "\t" $2 "\t" $3;}' $RPA_xls > $RPA_xls\.filter 
 awk -v Mval=$M -v Pval=$P '{if (($4 == "unique_peak1" || $4 == "common_peak1") && $7 > Mval && $9 > Pval) print $1 "\t" $2 "\t" $3;}' $SMC5_xls > $SMC5_xls\.filter 
 
 # sort and apply pre merge
+echo "Sorting and Premerge"
 sort -k 1,1 -k 2,2n $BRCA1_xls\.filter | bedtools merge -d $PREMERGE -i - > tmp 
 mv tmp $BRCA1_xls\.filter
 
@@ -244,6 +273,8 @@ sort -k 1,1 -k 2,2n $SMC5_xls\.filter | bedtools merge -d $PREMERGE -i - > tmp
 mv tmp $SMC5_xls\.filter
 
 # intersect all three files and apply post merge and min length filter
+echo "Intersecting"
 bedtools intersect -a $BRCA1_xls\.filter -b $RPA_xls\.filter > tmp
 bedtools intersect -a tmp -b $SMC5_xls\.filter | sort -k 1,1 -k 2,2n | bedtools merge -d $POSTMERGE -i - | awk -v len=$MIN '{if ($3 - $2 > len) print $1 "\t" $2 "\t" $3}' > AltERFs.bed
 rm tmp
+echo "Done"
