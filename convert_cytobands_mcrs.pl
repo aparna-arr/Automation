@@ -10,7 +10,7 @@ open(ERR, ">", "err.out");
 open(OUT, ">", $outfile) or die "could not open $outfile: $!\n";
 
 my %mcr_coords;
-my %mcr_dup;
+#my %mcr_dup;
 while(<MCR>) {
 	my $line = $_;
 	chomp $line;
@@ -146,7 +146,7 @@ foreach my $mcr (keys %mcr_coords) {
 			my ($dec) = $raw_coord =~ /^$chr_num$pq\.(\d+)$/;
 			warn "dec is [$dec] from raw_coord [$raw_coord]\n";
 			my (@dec_ar) = split("", $dec);
-	
+
 			if (@dec_ar == 1) {
 				if (exists($conv_coords{$chr}{$pq}{$dec})){
 					if (exists($conv_coords{$chr}{$pq}{$dec}{start})) {

@@ -7,7 +7,7 @@ Warnings:
 Assumes wig has 1 variable step line per chromosome
 Searches all lines, not just variableStep lines, for pattern
 If pattern is found, copies line and all following line until next variableStep line
-Outfile: <pattern>.wig
+Outfile: \$input_filename.<pattern>
 
 ";
 
@@ -17,7 +17,9 @@ die "usage : $0 <wig file> <pattern>\n$warning" unless @ARGV;
 print $warning;
 
 open (IN, "<", $wig) or die "Could not open $wig\n" ;
-open (OUT, ">", "$pattern.wig") or die "Could not open $pattern.wig" ;
+open (OUT, ">", "$wig.$pattern") or die "Could not open $pattern.wig" ;
+
+print OUT "track type=wiggle_0 name=\"$wig.$pattern\"\n";
 my $continue = 0 ;
 while (<IN>) {
   my $line = $_ ;
