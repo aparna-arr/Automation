@@ -1,3 +1,19 @@
+# 
+# panels.R
+# 
+# Description: 
+# 	creates panelcor plot from an input data.frame
+# 	showing correlation heatmap, distribution, scatterplot
+# 	very useful for quickly checking several datasets
+#
+# Usage: Use within an R interactive environment or as part of a script
+# 	This is not standalone.
+#
+# Author: Aparna Rajpurkar (2015)
+#
+# NO GUARANTEE IS MADE OR ASSUMED.
+#
+
 panelcor = function(df, title = "Test") {
 panel.cor <- function(x, y, digits=2, cex.cor)
 {

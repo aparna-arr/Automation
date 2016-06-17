@@ -4,6 +4,29 @@ use strict;
 use Thread;
 use Thread::Queue;
 
+# 
+# shuffle_user_friendly.pl
+#
+# Description: 
+# 	performs simulation of peak intersects on genome
+# 	Shuffles one peak set on same-chromosome
+# 	with exclusion of gaps set by user
+# 	and intersects with N other peaksets
+# 	to give the "random" incidence of bp intersection
+#
+# Features:
+# 	Threading
+# 	Actual user input validation
+# 	Tests command before running threads
+# 	Many more error messages than I usually give
+#	
+# Author: Aparna Rajpurkar (June 2016)
+# Email: aparna.arr@gmail.com
+#
+# NO GUARANTEE IS MADE. 
+#
+
+
 ## GLOBALS ##
 
 my $usage = "
